@@ -1,0 +1,43 @@
+@startuml
+title my
+== start stage ==
+Johnson -> Phoebe:sayHello()
+...no timeout 5 ...
+
+Johnson <- Phoebe:sayYes()
+Johnson -> Johnson:ohYes()
+==数据上传==
+Johnson --> Bob: 数据上传
+note left:显示左边
+Bob -> Phoebe: 数据上
+note right:hello
+@enduml
+
+
+
+
+@startuml
+title 时序图
+
+== 鉴权阶段 ==
+
+Alice -> Bob: 请求
+Bob -> Alice: 应答
+
+== 数据上传 ==
+
+Alice -> Bob: 上传数据
+note left: 这是显示在左边的备注
+
+Bob --> Canny: 转交数据
+... 不超过 5 秒钟 ...
+Canny --> Bob: 状态返回
+note right: 这是显示在右边的备注
+
+Bob -> Alice: 状态返回
+
+== 状态显示 ==
+
+Alice -> Alice: 给自己发消息
+
+@enduml
