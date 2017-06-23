@@ -2,23 +2,31 @@ package com.johnson.controller;
 
 
 import com.google.common.base.Strings;
+import com.google.gson.*;
+import com.google.gson.stream.JsonReader;
 import com.johnson.utils.ConfigHandler;
 import com.johnson.utils.MsgHandler;
 import com.johnson.utils.MyBean;
 import com.johnson.utils.V6ServiceInvoker;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import youngfriend.common.util.StringUtils;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * Created by johnson on 14/06/2017.
@@ -36,7 +44,7 @@ public class Main {
     @FXML
     private TreeView<Object> serviceTree;
     @FXML
-    private Tab serverTestTab;
+    private TabPane mainTabPane;
 
     @FXML
     private void initialize() {
@@ -47,39 +55,14 @@ public class Main {
         url.setText(Strings.nullToEmpty(urlValue));
         username.setText(usernameValue == null ? "admin" : usernameValue);
         proxy.setSelected("true".equals(proxyValue));
+        loadTab();
     }
 
-    private void loadTab() {
-        File tabDir = new File(getClass().getClassLoader().getResource("views/tabs").getFile());
-        File[] tabfxmls = tabDir.listFiles();
-        Service<Parent[]> service = new Service<Parent[]>() {
-            @Override
-            protected Task<Parent[]> createTask() {
-                return new Task<Parent[]>() {
-                    @Override
-                    protected Parent[] call() throws Exception {
-                        return (Parent[]) Arrays.stream(tabfxmls).map(tabfxml -> {
-                            try {
-                                return (Parent) FXMLLoader.load(tabfxml.toURI().toURL());
-                            } catch (IOException e) {
-                                MsgHandler.showException("导入tab报错", e);
-                                throw new RuntimeException(e);
-                            }
-                        }).toArray();
-                    }
-                };
-            }
-        };
-    }
-
-
-    public Main() {
-
-    }
 
     private Service<TreeItem<Object>> getServicesServices;
 
-    public void login() {
+    @FXML
+    private void login() {
         if (getServicesServices != null) {
             getServicesServices.cancel();
         } else {
@@ -127,4 +110,53 @@ public class Main {
         getServicesServices.restart();
     }
 
+    private void loadTab() {
+        Service<Map<JsonObject, Parent>> service = new Service<Map<JsonObject, Parent>>() {
+            @Override
+            protected Task<Map<JsonObject, Parent>> createTask() {
+
+                return new Task<Map<JsonObject, Parent>>() {
+                    @Override
+                    protected Map<JsonObject, Parent> call() throws Exception {
+
+                        InputStreamReader inputStreamReader = null;
+                        Map<JsonObject, Parent> tabMap;
+                        try {
+                            inputStreamReader = new InputStreamReader(getClass().getClassLoader().getResourceAsStream("views/tabs/tabs.json"));
+                            JsonArray tabJsonArray = new JsonParser().parse(inputStreamReader).getAsJsonArray();
+                            tabMap = new TreeMap<>(Comparator.comparingInt(o -> o.get("index").getAsInt()));
+                            tabJsonArray.forEach(tabJsonElement -> {
+                                JsonObject tabJson = tabJsonElement.getAsJsonObject();
+                                URL tabFileUrl = getClass().getClassLoader().getResource("views/tabs/" + tabJson.get("file").getAsString());
+                                if (tabFileUrl != null) {
+                                    MsgHandler.logger.debug("导入{}", tabFileUrl);
+                                    try {
+                                        Parent parent = FXMLLoader.load(tabFileUrl);
+                                        tabMap.put(tabJson, parent);
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            });
+                        } finally {
+                            if (inputStreamReader != null) {
+                                inputStreamReader.close();
+                            }
+                        }
+                        return tabMap;
+                    }
+                };
+            }
+        };
+        service.setOnFailed(event -> {
+            MsgHandler.showException("导入tab fxml失败", event.getSource().getException());
+        });
+        service.setOnSucceeded(event -> {
+            Map<JsonObject, Parent> tabMap = (Map<JsonObject, Parent>) event.getSource().getValue();
+            tabMap.forEach((tabObject, parent) -> {
+                mainTabPane.getTabs().add(new Tab(tabObject.get("name").getAsString(), parent));
+            });
+        });
+        service.start();
+    }
 }

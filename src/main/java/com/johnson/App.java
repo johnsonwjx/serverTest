@@ -20,7 +20,6 @@ import static javafx.scene.control.ButtonType.OK;
 
 
 public class App extends Application {
-    public static final Logger logger = LoggerFactory.getLogger(App.class);
     private Stage primaryStage;
 
     public static void main(String[] args) {
@@ -46,7 +45,6 @@ public class App extends Application {
             primaryStage.show();
         } catch (IOException e) {
             MsgHandler.showException("界面描述文件导入失败", e);
-            logger.error(e.getMessage());
         }
     }
 

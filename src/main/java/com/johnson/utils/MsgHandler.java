@@ -7,6 +7,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -16,7 +18,7 @@ import java.util.Optional;
  * Created by johnson on 19/06/2017.
  */
 public class MsgHandler {
-
+    public static final Logger logger = LoggerFactory.getLogger("msgLog");
 
     public static void showMsg(Alert.AlertType alertType, String... params) {
         Alert alert = new Alert(alertType);
@@ -67,6 +69,7 @@ public class MsgHandler {
 // Set expandable Exception into the dialog pane.
         alert.getDialogPane().setExpandableContent(expContent);
         alert.showAndWait();
+        logger.error(title, e);
     }
 
     public static Optional<ButtonType> confirmAlert(Stage stage, String title, String text) {
