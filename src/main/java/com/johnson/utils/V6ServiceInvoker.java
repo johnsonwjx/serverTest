@@ -11,7 +11,7 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.events.EndElement;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
-import java.io.StringReader;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
@@ -26,11 +26,7 @@ public class V6ServiceInvoker {
 
     private static Charset GBK_CHARSET = Charset.forName("GBK");
 
-    public static void loginSystem(String... params) throws Exception {
-        String username = params[0];
-        String password = params[1];
-        String url = params[2];
-        String proxy = params[3];
+    public static void loginSystem(String username, String password, String url, String proxy) throws Exception {
         InetAddress localHost = InetAddress.getLocalHost();
         Hashtable<String, String> sendTab = new Hashtable<String, String>();
         sendTab.put("service", "useraccess.login");
@@ -73,6 +69,11 @@ public class V6ServiceInvoker {
         System.setProperty("yf_username", username);
         //保存是否使用web代理
         System.setProperty("yf_webproxy", proxy);
+        Properties config = ConfigHandler.INSTANCE.getConfig();
+        config.setProperty("url", url);
+        config.setProperty("username", username);
+        config.setProperty("proxy", proxy);
+        ConfigHandler.INSTANCE.saveConfig();
     }
 
     public static String serviceInvoke(Hashtable<String, String> inparam, String url, Boolean webproxy) throws Exception {
@@ -132,7 +133,14 @@ public class V6ServiceInvoker {
         return output;
     }
 
-
+    /**
+     * 更具地址获取所有服务
+     *
+     * @param url
+     * @param webproxy
+     * @return
+     * @throws Exception
+     */
     public static List<MyBean> getServices(String url, boolean webproxy) throws Exception {
         Hashtable<String, String> inparam = new Hashtable<String, String>();
         inparam.put("service", "system.poperties.serviceslocation");
@@ -189,4 +197,32 @@ public class V6ServiceInvoker {
         });
         return serviceList;
     }
+
+    public static String httpGetEncoding(String url, String in, String encoding) throws IOException {
+        OutputStream outputStream = null;
+        InputStream inputStream = null;
+        try {
+            URLConnection client = new URL(url).openConnection();
+            client.setDoOutput(true);
+            outputStream = client.getOutputStream();
+            client.getOutputStream().write(in.getBytes());
+            client.getOutputStream().flush();
+            client.getOutputStream().close();
+            int dataLen = client.getContentLength();
+            if (dataLen >= 0) {
+                inputStream = client.getInputStream();
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, encoding));
+                return bufferedReader.readLine();
+            }
+            return null;
+        } finally {
+            if (outputStream != null) {
+                outputStream.close();
+            }
+            if (inputStream != null) {
+                outputStream.close();
+            }
+        }
+    }
+
 }
