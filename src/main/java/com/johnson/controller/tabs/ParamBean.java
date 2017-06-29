@@ -4,6 +4,8 @@ import javafx.beans.property.SimpleStringProperty;
 
 /**
  * Created by johnson on 23/06/2017.
+ * <p>
+ * 参数对象
  */
 public class ParamBean {
     private final SimpleStringProperty name;
@@ -37,4 +39,6 @@ public class ParamBean {
     public void setValue(String value) {
         this.value.set(value);
     }
+
+
 }

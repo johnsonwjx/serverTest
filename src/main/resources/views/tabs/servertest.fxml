@@ -1,23 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
 <?import java.lang.*?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<SplitPane dividerPositions="0.5" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" orientation="VERTICAL" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.johnson.controller.tabs.ServerTest">
+<SplitPane dividerPositions="0.5" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" onKeyPressed="#shortcut" orientation="VERTICAL" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.johnson.controller.tabs.ServerTest">
     <items>
-        <BorderPane prefHeight="200.0" prefWidth="200.0">
-            <center>
-                <TextArea prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
-            </center>
-        </BorderPane>
+        <BorderPane fx:id="mainPnl" prefHeight="200.0" prefWidth="200.0" />
         <BorderPane prefHeight="200.0" prefWidth="200.0">
             <bottom>
                 <ToolBar prefHeight="40.0" prefWidth="200.0" BorderPane.alignment="CENTER">
                     <items>
-                  <TextField fx:id="paramName" prefHeight="27.0" prefWidth="97.0" promptText="参数" />
-                  <TextField fx:id="paramValue" prefHeight="27.0" prefWidth="114.0" promptText="值" />
+                  <TextField fx:id="paramName" onKeyPressed="#paramEnter" prefHeight="27.0" prefWidth="103.0" promptText="参数" />
+                  <TextField fx:id="paramValue" onKeyPressed="#paramEnter" prefHeight="27.0" prefWidth="227.0" promptText="值" HBox.hgrow="ALWAYS" />
                   <Button mnemonicParsing="false" onAction="#add" text="添加" />
+                  <Button mnemonicParsing="false" onAction="#remove" text=" 删除" />
+                  <Button mnemonicParsing="false" onAction="#clean" text="清空" />
                         <Button mnemonicParsing="false" onAction="#submit" text="submit" />
                     </items>
                 </ToolBar>
@@ -25,19 +23,22 @@
             <top>
                 <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
                     <tabs>
-                        <Tab text="form">
+                        <Tab fx:id="form" text="form">
                             <content>
-                                <TableView fx:id="paramTable" prefHeight="200.0" prefWidth="200.0">
+                                <TableView fx:id="paramTable" editable="true" prefHeight="200.0" prefWidth="200.0">
                                     <columns>
-                                        <TableColumn fx:id="name" maxWidth="1.7976931348623157E308" prefWidth="152.0" resizable="false" text="参数" />
-                                        <TableColumn fx:id="value" maxWidth="1.7976931348623157E308" prefWidth="179.0" resizable="false" text="值" />
+                                        <TableColumn fx:id="nameCol" maxWidth="171.0" prefWidth="171.0" resizable="false" text="参数" />
+                                        <TableColumn fx:id="valueCol" prefWidth="427.0" text="值" />
                                     </columns>
+                           <columnResizePolicy>
+                              <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                           </columnResizePolicy>
                                 </TableView>
                             </content>
                         </Tab>
-                        <Tab text="raw">
+                        <Tab fx:id="raw" onSelectionChanged="#rawTabSelect" text="raw">
                             <content>
-                                <TextArea layoutX="64.0" layoutY="-16.0" prefHeight="200.0" prefWidth="200.0" />
+                                <TextArea fx:id="rawTextArea" layoutX="64.0" layoutY="-16.0" prefHeight="200.0" prefWidth="200.0" />
                             </content>
                         </Tab>
                     </tabs>

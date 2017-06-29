@@ -39,6 +39,12 @@ public class MsgHandler {
         alert.showAndWait();
     }
 
+    /**
+     * 异常了示面板
+     *
+     * @param title 标题
+     * @param e     异常对象
+     */
     public static void showException(String title, Throwable e) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("错误");

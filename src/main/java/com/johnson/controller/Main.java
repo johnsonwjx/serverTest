@@ -2,31 +2,24 @@ package com.johnson.controller;
 
 
 import com.google.common.base.Strings;
-import com.google.gson.*;
-import com.google.gson.stream.JsonReader;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.johnson.utils.ConfigHandler;
 import com.johnson.utils.MsgHandler;
 import com.johnson.utils.MyBean;
 import com.johnson.utils.V6ServiceInvoker;
-import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import youngfriend.common.util.StringUtils;
 
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.*;
-import java.util.function.Consumer;
 
 /**
  * Created by johnson on 14/06/2017.
@@ -37,7 +30,8 @@ public class Main {
 
     @FXML
     private TextField username;
-
+    @FXML
+    private PasswordField password;
     @FXML
     private CheckBox proxy;
 
@@ -72,6 +66,7 @@ public class Main {
                     return new Task<TreeItem<Object>>() {
                         @Override
                         protected TreeItem<Object> call() throws Exception {
+                            //根据 url proxy获取服务并设到系统环境变量
                             List<MyBean> services = V6ServiceInvoker.getServices(url.getText().trim(), proxy.isSelected());
                             TreeItem<Object> root = new TreeItem<>("服务");
                             services.forEach(service -> {
@@ -83,12 +78,13 @@ public class Main {
                                 if (proxy.isSelected())//使用集群，那样所有服务都用web地址
                                     value = url.getText().trim();
                                 String key = service.get("name");
-                                if (!StringUtils.nullOrBlank(key)) {
+                                if (!Strings.isNullOrEmpty(key)) {
                                     System.setProperty(key, value);
                                 }
-
                             });
                             root.setExpanded(true);
+                            //根据 系统环境变量的服务对应url地址，登录系统了,并保存到 config文件
+                            V6ServiceInvoker.loginSystem(username.getText().trim(), password.getText().trim(), url.getText().trim(), String.valueOf(proxy.isSelected()));
                             return root;
                         }
                     };
@@ -96,14 +92,11 @@ public class Main {
             };
             getServicesServices.setOnSucceeded(event -> {
                 serviceTree.setRoot((TreeItem<Object>) event.getSource().getValue());
-                Properties config = ConfigHandler.INSTANCE.getConfig();
-                config.setProperty("url", url.getText().trim());
-                config.setProperty("username", username.getText().trim());
-                config.setProperty("proxy", String.valueOf(proxy.isSelected()));
-                ConfigHandler.INSTANCE.saveConfig();
+
             });
             getServicesServices.setOnFailed(event -> {
                 MsgHandler.showException("建立服务树失败", event.getSource().getException());
+                serviceTree.setRoot(null);
             });
         }
         serviceTree.setRoot(new TreeItem<>("加载中...", new ProgressIndicator()));

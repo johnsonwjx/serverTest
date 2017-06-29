@@ -11,7 +11,7 @@
         <items>
             <TextField fx:id="url" promptText="web/server url" />
             <TextField fx:id="username" promptText="用户名" text="admin" />
-            <PasswordField promptText="密码" />
+            <PasswordField fx:id="password" promptText="密码" />
             <CheckBox fx:id="proxy" mnemonicParsing="false" text="代理" />
           <Button mnemonicParsing="false" onAction="#login" text="登录" />
         </items>

@@ -1,9 +1,9 @@
 package com.johnson.utils;
 
+
 import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import youngfriend.common.util.net.ServiceInvokerUtil;
-import youngfriend.common.util.net.exception.ServiceInvokerException;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
@@ -17,10 +17,9 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.stream.Stream;
 
-/**
- * Created by johnson on 15/06/2017.
- */
+
 public class V6ServiceInvoker {
 
 
@@ -28,7 +27,7 @@ public class V6ServiceInvoker {
 
     public static void loginSystem(String username, String password, String url, String proxy) throws Exception {
         InetAddress localHost = InetAddress.getLocalHost();
-        Hashtable<String, String> sendTab = new Hashtable<String, String>();
+        Map<String, String> sendTab = new HashMap<>();
         sendTab.put("service", "useraccess.login");
         sendTab.put("registerName", username);
         sendTab.put("password", password);
@@ -38,26 +37,27 @@ public class V6ServiceInvoker {
         sendTab.put("ptype", "client");
         //UserAccess服务地址为空的时候报错
         if (Strings.isNullOrEmpty(System.getProperty("useraccess")))
-            throw new ServiceInvokerException(V6ServiceInvoker.class, "验证用户失败！", "身份认证服务没有启用！");
+            throw new Exception("验证用户失败！身份认证服务没有启用！");
 
-        Hashtable<String, String> reTab = ServiceInvokerUtil.invoker(sendTab);
+        Map<String, String> reTab = httpGetMap(sendTab);
         //对结果进行解析
-        if (reTab.isEmpty()) {
-            throw new ServiceInvokerException(V6ServiceInvoker.class, "验证用户失败！", "服务返回信息为空！");
+        if (reTab == null) {
+            throw new Exception("验证用户失败！服务返回信息为空！");
         }
         String assID = reTab.get("sysAccessID");
         if (Strings.isNullOrEmpty(assID)) {
-            throw new ServiceInvokerException(V6ServiceInvoker.class, "验证用户失败!", "验证用户权限服务返回消息为空！");
+            throw new Exception("验证用户失败!验证用户权限服务返回消息为空！");
         }
         //将系统访问sysAccessID写入系统变量中
         System.setProperty("sysAccessID", assID);
 
-        Hashtable<String, String> sendTab2 = new Hashtable<String, String>();
-        sendTab2.put("service", "useraccess.getUserID");
-        sendTab2.put("sysAccessID", assID);
 
-        Hashtable<String, String> reTab2 = ServiceInvokerUtil.invoker(sendTab2);
-        String userID = reTab2.get("userID");
+        sendTab.clear();
+        sendTab.put("service", "useraccess.getUserID");
+        sendTab.put("sysAccessID", assID);
+
+        reTab = httpGetMap(sendTab);
+        String userID = reTab.get("userID");
         if (!Strings.isNullOrEmpty(userID)) {
             //根据系统存储ID取出用户ID,写入系统变量中
             System.setProperty("userID", userID);
@@ -76,78 +76,24 @@ public class V6ServiceInvoker {
         ConfigHandler.INSTANCE.saveConfig();
     }
 
-    public static String serviceInvoke(Hashtable<String, String> inparam, String url, Boolean webproxy) throws Exception {
-        String param = Joiner.on("\n").withKeyValueSeparator(":=").join(inparam);
-        String reMsg = sendData(param, url, webproxy);//调用服务并返回值
-        if (Strings.isNullOrEmpty(reMsg)) {
-            throw new Exception("返回数据为空");
-        } else {
-            if (reMsg.startsWith("errorMessage")) {
-                throw new Exception(reMsg);
-            }
-            reMsg = reMsg.substring(reMsg.indexOf(":=") + 2).trim();
-            if (Strings.isNullOrEmpty(reMsg)) {
-                throw new Exception("返回数据异常");
-            }
-        }
-        if (reMsg.indexOf("未找到") != -1 || reMsg.indexOf("服务已停止") != -1) {
-            throw new RuntimeException(reMsg);
-        }
-        return reMsg;
-    }
-
-    /**
-     * 发送信息到服务器
-     *
-     * @param msgVar     消息字符串
-     * @param serviceUrl 服务地址
-     * @return 返回消息结果
-     */
-    public static String sendData(String msgVar, String serviceUrl, boolean useWebProxy) throws Exception {
-        //检验地址的合法性
-        if (!serviceUrl.toLowerCase().startsWith("http://"))
-            serviceUrl = "http://" + serviceUrl;
-
-        if (useWebProxy)
-            serviceUrl = serviceUrl + "/webproxy";
-        String output = null;
-        URL url = new URL(serviceUrl);
-        URLConnection client = url.openConnection();
-        client.setDoOutput(true);
-        client.getOutputStream().write(msgVar.getBytes());
-        client.getOutputStream().flush();
-        client.getOutputStream().close();
-        //client.connect();
-        int dataLen = client.getContentLength();
-        if (dataLen > 0) {
-            byte[] data = new byte[dataLen];
-            int p = 0;
-            while (p < dataLen) {
-                int r = client.getInputStream().read(data, p, dataLen);
-                if (r < 0)
-                    break;
-                p = p + r;
-            }
-            output = new String(data, GBK_CHARSET);
-        }
-        return output;
-    }
 
     /**
      * 更具地址获取所有服务
      *
-     * @param url
-     * @param webproxy
-     * @return
-     * @throws Exception
+     * @param url      地址
+     * @param webproxy 启用代理
+     * @return 所有服务list对象
+     * @throws Exception 调用服务错误
      */
     public static List<MyBean> getServices(String url, boolean webproxy) throws Exception {
-        Hashtable<String, String> inparam = new Hashtable<String, String>();
-        inparam.put("service", "system.poperties.serviceslocation");
-        inparam.put("xml", "");
-        String reMsg = serviceInvoke(inparam, url, webproxy);
+        String param = "service:=system.poperties.serviceslocation\nxml:=\n";
+        String reMsg = httpGetEncoding(url, param, GBK_CHARSET, webproxy);
+        if (Strings.isNullOrEmpty(reMsg)) {
+            throw new IllegalAccessException("服务注册失败");
+        }
+        String xml = v6String2Map(reMsg).get("Xml");
         XMLInputFactory factory = XMLInputFactory.newInstance();
-        XMLEventReader xmlEventReader = factory.createXMLEventReader(new StringReader(reMsg));
+        XMLEventReader xmlEventReader = factory.createXMLEventReader(new StringReader(xml));
         List<MyBean> serviceList = new ArrayList<>(20);
         Stack<MyBean> myBeanStack = new Stack<>();
         while (xmlEventReader.hasNext()) {
@@ -178,7 +124,7 @@ public class V6ServiceInvoker {
             }
         }
 
-        Collections.sort(serviceList, (o1, o2) -> {
+        serviceList.sort((o1, o2) -> {
             if (o1 == null) {
                 return -1;
             }
@@ -198,7 +144,12 @@ public class V6ServiceInvoker {
         return serviceList;
     }
 
-    public static String httpGetEncoding(String url, String in, String encoding) throws IOException {
+    public static String httpGetEncoding(String url, String in, Charset encoding, boolean useWebProxy) throws IOException {
+        if (!url.toLowerCase().startsWith("http://"))
+            url = "http://" + url;
+
+        if (useWebProxy)
+            url = url + "/webproxy";
         OutputStream outputStream = null;
         InputStream inputStream = null;
         try {
@@ -209,12 +160,16 @@ public class V6ServiceInvoker {
             client.getOutputStream().flush();
             client.getOutputStream().close();
             int dataLen = client.getContentLength();
-            if (dataLen >= 0) {
-                inputStream = client.getInputStream();
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, encoding));
-                return bufferedReader.readLine();
+            if (dataLen <= 0) {
+                return null;
             }
-            return null;
+            StringBuilder sb = new StringBuilder();
+            inputStream = client.getInputStream();
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, encoding));
+            Stream<String> lines = bufferedReader.lines();
+            lines.parallel().forEach(s -> sb.append(s).append("\n"));
+            sb.deleteCharAt(sb.length() - 1);
+            return sb.toString();
         } finally {
             if (outputStream != null) {
                 outputStream.close();
@@ -225,4 +180,34 @@ public class V6ServiceInvoker {
         }
     }
 
+
+    public static String httpGet(String in) throws IOException {
+        String serviceReg = "service:=";
+        int serviceIndex = in.indexOf(serviceReg);
+        if (serviceIndex == -1) {
+            throw new IllegalArgumentException("service参数为空");
+        }
+        String serviceName = in.substring(serviceIndex + serviceReg.length(), in.indexOf(".", serviceIndex + serviceReg.length()));
+        String url = System.getProperty(serviceName);
+        if (Strings.isNullOrEmpty(url)) {
+            throw new IllegalStateException(serviceName + "服务没安装");
+        }
+        return httpGetEncoding(url, in, GBK_CHARSET, false);
+    }
+
+    public static Map<String, String> httpGetMap(Map<String, String> paramMap) throws IOException {
+        String param = Joiner.on("\n").withKeyValueSeparator(":=").join(paramMap);
+        return httpGetMap(param);
+    }
+
+    public static Map<String, String> httpGetMap(String in) throws IOException {
+        return v6String2Map(httpGet(in));
+    }
+
+    public static Map<String, String> v6String2Map(String string) {
+        if (Strings.isNullOrEmpty(string)) {
+            return null;
+        }
+        return Splitter.on("\n").trimResults().withKeyValueSeparator(Splitter.on(":=").trimResults()).split(string);
+    }
 }
